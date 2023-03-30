@@ -14,6 +14,8 @@ contract SwapProxy is Ownable {
 	uint256 private _commissionInBasisPoints;
 
 	event CommissionPercentageUpdated(uint256 oldCommissionInBasisPoints, uint256 newCommissionInBasisPoints);
+	
+	event CommissionReceiverUpdated(address oldCommissionReceiver, address newCommissionReceiver)
 
 	event SwapWithCommission(
 		uint256 amountIn,
@@ -145,5 +147,12 @@ contract SwapProxy is Ownable {
 		_commissionInBasisPoints = commissionInBasisPoints_;
 
 		emit CommissionPercentageUpdated(oldCommissionInBasisPoints, _commissionInBasisPoints);
+	}
+
+	function updateCommissionReceiver(uint256 commisionReceiver_) external onlyOwner {
+		uint256 oldCommissionReceiver = _commisionReceiver;
+		_commisionReceiver = commisionReceiver_;
+
+		emit CommissionReceiverUpdated(oldCommissionReceiver, _commissionReceiver);
 	}
 }

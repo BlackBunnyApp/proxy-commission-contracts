@@ -14,6 +14,8 @@ contract YearnProxy is Ownable {
 
 	event CommissionPercentageUpdated(uint256 oldCommissionInBasisPoints, uint256 newCommissionInBasisPoints);
 
+	event CommissionReceiverUpdated(address oldCommissionReceiver, address newCommissionReceiver)
+
 	event DepositWithCommission(uint256 amountIn, uint256 amountWithoutCommission, uint256 commission);
 
 	constructor(address commisionReceiver_, uint256 commissionInBasisPoints_) {
@@ -49,5 +51,12 @@ contract YearnProxy is Ownable {
 		_commissionInBasisPoints = commissionInBasisPoints_;
 
 		emit CommissionPercentageUpdated(oldCommissionInBasisPoints, _commissionInBasisPoints);
+	}
+
+	function updateCommissionReceiver(uint256 commisionReceiver_) external onlyOwner {
+		uint256 oldCommissionReceiver = _commisionReceiver;
+		_commisionReceiver = commisionReceiver_;
+
+		emit CommissionReceiverUpdated(oldCommissionReceiver, _commissionReceiver);
 	}
 }
