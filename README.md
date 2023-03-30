@@ -1,252 +1,209 @@
-# Utils library for contracts and tests
+# Commission proxy contracts
 
-[![Build Status](https://github.com/1inch/solidity-utils/workflows/CI/badge.svg)](https://github.com/1inch/solidity-utils/actions)
-[![Coverage Status](https://codecov.io/gh/1inch/solidity-utils/branch/master/graph/badge.svg?token=HJWBIVXQQA)](https://codecov.io/gh/1inch/solidity-utils)
-[![NPM Package](https://img.shields.io/npm/v/@1inch/solidity-utils.svg)](https://www.npmjs.org/package/@1inch/solidity-utils)
+# YearnProxy
 
-### About
+Basically, it’s contract to make proxied swaps with taking commission. Contract uses UniswapV2Router as implementation (basically accounted to use SushiSwap router contract).
 
-This repository contains frequently used smart contracts, libraries and interfaces. Also it contains utils which are used in tests.
+Uses Yearn Vault technology and contracts to make swaps via the **deposit()** method
 
-### Solidity
+```solidity
+function deposit(
+	address vault,
+	address token,
+	uint256 amount
+) external returns (uint256) {
+	IERC20 srcToken = IERC20(token);
+	uint256 newAmount = deductCommission(srcToken, amount);
 
-| directory            | .sol                 | description                                                      |
-| -------------------- | -------------------- | ---------------------------------------------------------------- |
-| contracts            | `EthReceiver`        |                                                                  |
-| contracts            | `Permitable`         |                                                                  |
-| contracts            | `GasChecker`         |                                                                  |
-| contracts/interfaces | `IDaiLikePermit`     | Interface of token which has `permit` method like DAI token      |
-| contracts/interfaces | `IWETH`              | WETH token interface                                             |
-| contracts/libraries  | `AddressArray`       | library for work with array of addresses                         |
-| contracts/libraries  | `AddressSet`         | library for work with set of addresses                           |
-| contracts/libraries  | `RevertReasonParser` | library parse the message from reverted method to readble format |
-| contracts/libraries  | `StringUtil`         | optimized methods to convert data to hex                         |
-| contracts/libraries  | `UniERC20`           |                                                                  |
-
-### JS
-
-| module     | function                                                     | descrption                                                                                                                                 |
-| ---------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| asserts    | `assertThrowsAsync(action, msg)`                             | checks the async function `action()` thrown with message `msg`                                                                             |
-| asserts    | `assertRoughlyEqualValues(expected, actual, relativeDiff)`   | checks the `expected` value is equal to `actual` value with `relativeDiff` precision                                                       |
-| utils      | `timeIncreaseTo(seconds)`                                    | increases blockchain time to `seconds` sec                                                                                                 |
-| utils      | `trackReceivedToken(token, wallet, txPromise, ...args)`      | returns amount of `token` which recieved the `wallet` in async method `txPromise` with arguments `args`                                    |
-| utils      | `trackReceivedTokenAndTx(token, wallet, txPromise, ...args)` | returns transaction info and amount of `token` which recieved the `wallet` in async method `txPromise` with arguments `args`               |
-| utils      | `fixSignature(signature)`                                    | patchs ganache's signature to geth's version                                                                                               |
-| utils      | `signMessage(signer, messageHex) `                           | signs `messageHex` with `signer` and patchs ganache's signature to geth's version                                                          |
-| utils      | `countInstructions(txHash, instruction)`                     | counts amount of `instruction` in transaction with `txHash` hash                                                                           |
-| profileEVM | `profileEVM(txHash, instruction, optionalTraceFile)`         | the same as the `countInstructions()` with option of writing all trace to `optionalTraceFile`                                              |
-| profileEVM | `gasspectEVM(txHash, options, optionalTraceFile)`            | returns all used operations in `txHash` transaction with `options` and their costs with option of writing all trace to `optionalTraceFile` |
-
-### UTILS
-
-#### Docify
-
-Generates documentation in markdown format from natspec docs
-
-##### Usage
-
-Add to `package.json` file solidity compiler version and shortcut to run command
-
-`devDependencies` section
-
-```
-"solc": "0.8.12",
+	srcToken.approve(vault, newAmount);
+	return IVault(vault).deposit(newAmount, msg.sender);
+}
 ```
 
-`scripts` section
+and deposit() calls **deductCommission()**
 
-```
-"docify": "npx solidity-utils-docify"
-```
+```solidity
+function deductCommission(IERC20 token, uint256 amount) internal returns (uint256 newAmount) {
+		uint256 commission = (amount * _commissionInBasisPoints) / 10000;
 
-...
+		newAmount = amount - commission;
 
-#### Dependencies list (imports-list)
+		token.safeTransferFrom(msg.sender, address(this), amount);
+		token.safeTransfer(_commissionReceiver, commission);
 
-Lists all imports recursively for the given solidity contract file.
-
-##### Usage
-
-```
-npx imports-list -i <solidity file> [-a <alias list>]
+		emit DepositWithCommission(amount, newAmount, commission);
+	}
 ```
 
-Available parameters
+## Commission
 
-```
-Options:
-  -i, --input <input>     file to get dependencies for
-  -a, --alias [alias...]  projects alias list
-  -h, --help              display help for command
-```
+Calling any of listed above methods also calls **deductCommission()** or **deductEthCommission()** (base on what token is taken as input, named as amountIn in Uniswap).
 
-Aliases are used to provide source code for third-party projects.
-For example, your contract uses imports from your other project and import is defined as
+Commission calculated as follows (for eth):
 
-```
-import "@1inch/otherproject/contracts/dependency.sol";
+```solidity
+uint256 commission = (msg.value * _commissionInBasisPoints) / 10000;
 ```
 
-and you've got source code for `@1inch/otherproject` locally. Then you provide local path for the project to rip dependencies from `dependency.sol` as well.
-If there are several dependencies they should be provided using space as separator.
+And for tokens:
 
-##### Example
-
-File imports
-
-```Solidity
-#rootFile.sol
-import '@1inch/otherproject/contracts/dependency.sol'
-
-#@1inch/otherproject/contracts/dependency.sol
-import 'helpers/helper.sol'
+```solidity
+uint256 commission = (amountIn * _commissionInBasisPoints) / 10000;
 ```
 
-File and folder structure
+and then transfered to SwapProxy contract (to make approve for following swap) and part of it is sent to **_commissionReceiver**:
 
-```
-rootFolder/
-
--- mainProject/
----- contracts/
------- rootFile.sol
-
--- dependencyProject/
----- helpers/
------- helper.sol
----- dependency.sol
+```solidity
+IERC20(srcToken).safeTransferFrom(msg.sender, address(this), amountIn);
+IERC20(srcToken).safeTransfer(_commisionReceiver, commission);
 ```
 
-Command
+### Change commission
 
-```
-rootFolder/mainProject % npx imports-list -i './contracts/rootFile.sol' -a '@1inch/otherproject' '../dependencyProject'
-```
+**_commissionInBasisPoints** is specified on contract dpeloyment and can be changed via **updateCommissionPercent()** function (can only be called by the contract owner)
 
-Output
+```solidity
+function updateCommissionPercent(uint256 commissionInBasisPoints_) external onlyOwner {
+		uint256 oldCommissionInBasisPoints = _commissionInBasisPoints;
+		_commissionInBasisPoints = commissionInBasisPoints_;
 
-```
-Project => root
-not set
-
-Project => @1inch/otherproject
-../otherproject/contracts/dependency.sol
-../otherproject/contracts/helpers/helper.sol
+		emit CommissionPercentageUpdated(oldCommissionInBasisPoints, _commissionInBasisPoints);
+	}
 ```
 
-#### Test documentation generator (test-docgen)
+Commission is specified in **basis points**, not in percents (to make calculation more precise, despite the absence of floating point numbers in solidity). For example:
 
-Script generates documentation for tests in markdown format.
-Give descriptions for `describe` and `it` sections and build documentation using these descriptions.
+1 basis point = 0.01% 
 
-##### Example
+100 basis points = 1%
 
-Test described as shown below
+200 basis points = 2%
 
-```JavaScript
-// Test suite
-describe('My feature', function() {
-    // Nested test suite
-    describe("My subfeature", function() {
-        /*
-            **Test case 1**
-            Test case should work
-         */
-        it("My case", function() {
-        // code here
-        })
-    })
-})
+1000 basis points = 10%
+
+When the commission changed - the **CommissionPercentageUpdated** event is emited.
+
+### Change commission receiver
+
+**_commissionReceiver** is specified on contract dpeloyment and can be changed via **updateCommissionReceiver()** function (can only be called by the contract owner)
+
+```solidity
+function updateCommissionReceiver(uint256 commisionReceiver_) external onlyOwner {
+		uint256 oldCommissionReceiver = _commisionReceiver;
+		_commisionReceiver = commisionReceiver_;
+
+		emit CommissionReceiverUpdated(oldCommissionReceiver, _commissionReceiver);
+}
 ```
 
-will generated the following output
+When the commission receiver changed - the **CommissionReceiverUpdated** event is emited.
 
-```Markdown
+## Ownable
 
-# My feature
+Contract has owner - the address that has rights to change **_commissionPercentageInBasisPoints** and **_commissionReceiver** properties
 
-Test suite
+To change owner of the contract **transferOwnership** method should be called (can only be called by *current owner*)
 
-## My subfeature
-
-Nested test suite
-
-### My case
-
-**Test case 1**
-Test case should work
+```solidity
+function transferOwnership(address newOwner) public virtual onlyOwner {
+    require(newOwner != address(0), "Ownable: new owner is the zero address");
+    _transferOwnership(newOwner);
+}
 ```
 
-##### Installation
+## SafeERC20
 
--   Before use install documentation parser
+Uses SafeERC20 library to make transfer safer.
 
-```
-yarn add acquit --dev
-```
+# SwapProxy
 
--   Optionally configure script for default usage. Add to `script` section in `package.json`
+Basically, it’s contract to make proxied swaps with taking commission. Contract uses UniswapV2Router as implementation (basically accounted to use SushiSwap router contract).
 
-```
-"test:docs": "npx test-docgen"
-```
+Uses Uniswap V2 technology to make swaps via following methods:
 
--   Optionally configure script for generating test list only. Add to `script` section in `package.json`
+- swapExactTokensForTokens()
+- swapExactTokensForEth()
+- swapExactEthForTokens()
+- swapEthForExactTokens()
+- swapTokensForExactTokens()
+- swapTokensForExactEth()
 
-```
-"test:docs": "npx test-docgen -l"
-```
+## Commission
 
-##### Usage
+Calling any of listed above methods also calls **deductCommission()** or **deductEthCommission()** (base on what token is taken as input, named as amountIn in Uniswap).
 
-If script configured
+Commission calculated as follows (for eth):
 
-```
-yarn test:docs
-```
-
-or
-
-```
-npx test-docgen
+```solidity
+uint256 commission = (msg.value * _commissionInBasisPoints) / 10000;
 ```
 
-Available parameters
+And for tokens:
 
-```
-Options:
-  -i, --input <input>      tests directory (default: "test")
-  -x, --exclude [exclude]  exclude directories and files. omit argument to exclude all subdirectories (default: false)
-  -o, --output <output>    file to write output (default: "TESTS.md")
-  -c, --code               include code (default: false)
-  -l, --list               list tests only, do not include description (default: false)
-  -d, --debug              debug mode (default: false)
-  -h, --help               display help for command
+```solidity
+uint256 commission = (amountIn * _commissionInBasisPoints) / 10000;
 ```
 
-##### Examples
+and then transfered to SwapProxy contract (to make approve for following swap) and part of it is sent to **_commissionReceiver**:
 
-Generate docs with default input and output
-
-```
-npx test-docgen
-```
-
-Generate docs for files in folders `tests/mocks` and `tests/utils`
-
-```
-npx test-docgen -i "tests/mocks;tests/utils"
+```solidity
+IERC20(srcToken).safeTransferFrom(msg.sender, address(this), amountIn);
+IERC20(srcToken).safeTransfer(_commisionReceiver, commission);
 ```
 
-Exclude from docs file `test/mock-exclude.js` and `test/utils folder`
+### Change commission
 
-```
-npx test-docgen -x "tests/mock-exclude.js;tests/utils"
+**_commissionInBasisPoints** is specified on contract dpeloyment and can be changed via **updateCommissionPercent()** function (can only be called by the contract owner)
+
+```solidity
+function updateCommissionPercent(uint256 commissionInBasisPoints_) external onlyOwner {
+		uint256 oldCommissionInBasisPoints = _commissionInBasisPoints;
+		_commissionInBasisPoints = commissionInBasisPoints_;
+
+		emit CommissionPercentageUpdated(oldCommissionInBasisPoints, _commissionInBasisPoints);
+	}
 ```
 
-Generate list of tests only
+Commission is specified in **basis points**, not in percents (to make calculation more precise, despite the absence of floating point numbers in solidity). For example:
 
+1 basis point = 0.01% 
+
+100 basis points = 1%
+
+200 basis points = 2%
+
+1000 basis points = 10%
+
+When the commission changed - the **CommissionPercentageUpdated** event is emited.
+
+### Change commission receiver
+
+**_commissionReceiver** is specified on contract dpeloyment and can be changed via **updateCommissionReceiver()** function (can only be called by the contract owner)
+
+```solidity
+function updateCommissionReceiver(uint256 commisionReceiver_) external onlyOwner {
+		uint256 oldCommissionReceiver = _commisionReceiver;
+		_commisionReceiver = commisionReceiver_;
+
+		emit CommissionReceiverUpdated(oldCommissionReceiver, _commissionReceiver);
+}
 ```
-npx test-docgen -l
+
+When the commission receiver changed - the **CommissionReceiverUpdated** event is emited.
+
+## Ownable
+
+Contract has owner - the address that has rights to change **_commissionPercentageInBasisPoints** and **_commissionReceiver** properties
+
+To change owner of the contract **transferOwnership** method should be called (can only be called by *current owner*)
+
+```solidity
+function transferOwnership(address newOwner) public virtual onlyOwner {
+    require(newOwner != address(0), "Ownable: new owner is the zero address");
+    _transferOwnership(newOwner);
+}
 ```
+
+## SafeERC20
+
+Uses SafeERC20 library to make transfer safer.
