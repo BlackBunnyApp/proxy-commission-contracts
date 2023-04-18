@@ -10,12 +10,12 @@ import "./libraries/SafeERC20.sol";
 contract SwapProxy is Ownable {
 	using SafeERC20 for IERC20;
 	IUniswapV2Router01 private _router;
-	address private _commisionReceiver;
+	address private _commissionReceiver;
 	uint256 private _commissionInBasisPoints;
 
 	event CommissionPercentageUpdated(uint256 oldCommissionInBasisPoints, uint256 newCommissionInBasisPoints);
-	
-	event CommissionReceiverUpdated(address oldCommissionReceiver, address newCommissionReceiver)
+
+	event CommissionReceiverUpdated(address oldCommissionReceiver, address newCommissionReceiver);
 
 	event SwapWithCommission(
 		uint256 amountIn,
@@ -31,7 +31,7 @@ contract SwapProxy is Ownable {
 		uint256 commissionInBasisPoints_
 	) {
 		_router = IUniswapV2Router01(router_);
-		_commisionReceiver = commisionReceiver_;
+		_commissionReceiver = commisionReceiver_;
 		_commissionInBasisPoints = commissionInBasisPoints_;
 	}
 
@@ -125,7 +125,7 @@ contract SwapProxy is Ownable {
 		newAmountOut = (amountOut * (10000 - _commissionInBasisPoints)) / 10000;
 
 		IERC20(srcToken).safeTransferFrom(msg.sender, address(this), amountIn);
-		IERC20(srcToken).safeTransfer(_commisionReceiver, commission);
+		IERC20(srcToken).safeTransfer(_commissionReceiver, commission);
 
 		emit SwapWithCommission(amountIn, amountOut, newAmountIn, newAmountOut, commission);
 	}
@@ -136,7 +136,7 @@ contract SwapProxy is Ownable {
 		newAmountIn = msg.value - commission;
 		newAmountOut = (amountOut * (10000 - _commissionInBasisPoints)) / 10000;
 
-		(bool success, ) = _commisionReceiver.call{value: commission}("");
+		(bool success, ) = _commissionReceiver.call{value: commission}("");
 		require(success, "Transfer to receiver failed");
 
 		emit SwapWithCommission(msg.value, amountOut, newAmountIn, newAmountOut, commission);
@@ -149,9 +149,9 @@ contract SwapProxy is Ownable {
 		emit CommissionPercentageUpdated(oldCommissionInBasisPoints, _commissionInBasisPoints);
 	}
 
-	function updateCommissionReceiver(uint256 commisionReceiver_) external onlyOwner {
-		uint256 oldCommissionReceiver = _commisionReceiver;
-		_commisionReceiver = commisionReceiver_;
+	function updateCommissionReceiver(address commisionReceiver_) external onlyOwner {
+		address oldCommissionReceiver = _commissionReceiver;
+		_commissionReceiver = commisionReceiver_;
 
 		emit CommissionReceiverUpdated(oldCommissionReceiver, _commissionReceiver);
 	}
