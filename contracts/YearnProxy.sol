@@ -23,16 +23,14 @@ contract YearnProxy is Ownable {
 		_feeInBasisPoints = feeInBasisPoints_;
 	}
 
-	function deposit(
-		address vault,
-		address token,
-		uint256 amount
-	) external returns (uint256) {
+	function deposit(address vault, uint256 amount) external returns (uint256 shares) {
+		address token = IVault(vault).token();
 		IERC20 srcToken = IERC20(token);
 		uint256 newAmount = deductFee(srcToken, amount);
 
 		srcToken.approve(vault, newAmount);
-		return IVault(vault).deposit(newAmount, msg.sender);
+
+		shares = IVault(vault).deposit(newAmount, msg.sender);
 	}
 
 	function deductFee(IERC20 token, uint256 amount) internal returns (uint256 newAmount) {
