@@ -87,6 +87,11 @@ const networks: NetworksUserConfig = {
 		url: '',
 		accounts: getDeploymentAccount(),
 	},
+	fantom: {
+		url: 'https://rpcapi.fantom.network',
+		chainId: 250,
+		accounts: getDeploymentAccount(),
+	},
 };
 
 export default networks;
