@@ -10,6 +10,7 @@ import dotenv from 'dotenv';
 import { HardhatUserConfig } from 'hardhat/config';
 import networks from './hardhat.networks';
 import etherscan from './hardhat.etherscan';
+import 'hardhat-tracer';
 
 dotenv.config();
 
