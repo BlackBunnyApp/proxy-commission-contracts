@@ -1,10 +1,10 @@
 import hardhat, { ethers } from 'hardhat';
 
 async function deploy() {
-	const commissionReceiver = '0x037ef1821002d716E3C612beb23DCF4Ef338A405';
-	const commissionInBasisPoints = 100;
+	const feeReceiver = '0x037ef1821002d716E3C612beb23DCF4Ef338A405';
+	const feeInBasisPoints = 100;
 	const sushiRouter = '0xEfF92A263d31888d860bD50809A8D171709b7b1c';
-	const deployArgs: [string, string, number] = [sushiRouter, commissionReceiver, commissionInBasisPoints];
+	const deployArgs: [string, string, number] = [sushiRouter, feeReceiver, feeInBasisPoints];
 
 	const SwapProxy = await ethers.getContractFactory('SwapProxy');
 	const swapProxy = await SwapProxy.deploy(...deployArgs);

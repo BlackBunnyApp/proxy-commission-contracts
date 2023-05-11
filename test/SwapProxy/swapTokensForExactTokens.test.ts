@@ -16,8 +16,8 @@ describe('swapTokensForExactTokens', async function () {
 	const pathDaiToSushi = [dai, sushi];
 	const deadline = Math.floor(new Date().getTime() / 1000) + 120;
 
-	const commissionReceiver = '0xc7ae8f9Ea8bb06A04e98d43a941Dff8454e6ad36';
-	const commissionAmountIsBasisPoints = 100; // 1%
+	const feeReceiver = '0xc7ae8f9Ea8bb06A04e98d43a941Dff8454e6ad36';
+	const feeAmountIsBasisPoints = 100; // 1%
 
 	async function deploySwapProxy(): Promise<UniswapV2Router02> {
 		const sushiSwap = '0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F';
@@ -25,8 +25,8 @@ describe('swapTokensForExactTokens', async function () {
 		const SwapProxy = await ethers.getContractFactory('SwapProxy');
 		const swapProxy = (await SwapProxy.deploy(
 			sushiSwap,
-			commissionReceiver,
-			commissionAmountIsBasisPoints,
+			feeReceiver,
+			feeAmountIsBasisPoints,
 		)) as unknown as SwapProxy;
 		// await swapProxy.setImplementation(sushiSwap);
 
@@ -40,7 +40,7 @@ describe('swapTokensForExactTokens', async function () {
 		console.log(tx);
 	});
 
-	it('Swap happens and commission taken', async function () {
+	it('Swap happens and fee taken', async function () {
 		const amountInMax = BigNumber.from('10000000000000000');
 		const amountOut = BigNumber.from('8119599574477165');
 
@@ -62,9 +62,9 @@ describe('swapTokensForExactTokens', async function () {
 
 		const event = receipt.events?.find((event) => event.event === 'SwapWithCommission');
 		// console.log(event);
-		const commission = (event as any).args[4];
+		const fee = (event as any).args[4];
 
-		assertRoughlyEqualValues(commission.toString(), amountInMax.mul(100).div(10000).toString(), 100);
+		assertRoughlyEqualValues(fee.toString(), amountInMax.mul(100).div(10000).toString(), 100);
 
 		expect(receipt.status).to.be.eq(1);
 	});

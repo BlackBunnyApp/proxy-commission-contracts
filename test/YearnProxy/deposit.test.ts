@@ -12,16 +12,16 @@ describe('deposit', async function () {
 
 	const amountIn = BigNumber.from('10000000000000000');
 
-	const commissionReceiver = '0xc7ae8f9Ea8bb06A04e98d43a941Dff8454e6ad36';
-	const commissionAmountIsBasisPoints = 200; // 2%
+	const feeReceiver = '0xc7ae8f9Ea8bb06A04e98d43a941Dff8454e6ad36';
+	const feeAmountIsBasisPoints = 200; // 2%
 
 	async function deployYearnProxy(): Promise<YearnProxy> {
 		const YearnProxy = await ethers.getContractFactory('YearnProxy');
-		const yearnProxy = (await YearnProxy.deploy(commissionReceiver, commissionAmountIsBasisPoints)) as YearnProxy;
+		const yearnProxy = (await YearnProxy.deploy(feeReceiver, feeAmountIsBasisPoints)) as YearnProxy;
 		return yearnProxy;
 	}
 
-	it('Deposit happens and commission taken', async function () {
+	it('Deposit happens and fee taken', async function () {
 		const Dai = await ethers.getContractFactory('ERC20');
 		const daiContract = Dai.attach(dai) as ERC20;
 		const signer = await getSignerFromEnvPrivate();
@@ -39,13 +39,9 @@ describe('deposit', async function () {
 
 		const event = receipt.events?.find((event) => event.event === 'DepositWithCommission');
 		// console.log(event);
-		const commission = (event as any).args[2];
+		const fee = (event as any).args[2];
 
-		assertRoughlyEqualValues(
-			commission.toString(),
-			amountIn.mul(commissionAmountIsBasisPoints).div(10000).toString(),
-			100,
-		);
+		assertRoughlyEqualValues(fee.toString(), amountIn.mul(feeAmountIsBasisPoints).div(10000).toString(), 100);
 
 		expect(receipt.status).to.be.eq(1);
 	});

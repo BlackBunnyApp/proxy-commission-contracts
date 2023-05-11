@@ -4,17 +4,17 @@ import { ethers } from 'hardhat';
 import { YearnProxy } from '../../typechain-types';
 
 describe('updateCommissionReceiver()', async function () {
-	const commissionReceiver = '0xc7ae8f9Ea8bb06A04e98d43a941Dff8454e6ad36';
+	const feeReceiver = '0xc7ae8f9Ea8bb06A04e98d43a941Dff8454e6ad36';
 	const newCommissionReceiver = '0x2A40019ABd4A61d71aBB73968BaB068ab389a636';
-	const commissionAmountIsBasisPoints = 100; // 1%
+	const feeAmountIsBasisPoints = 100; // 1%
 
 	async function deployYearnProxy(): Promise<YearnProxy> {
 		const YearnProxy = await ethers.getContractFactory('YearnProxy');
-		const yearnProxy = (await YearnProxy.deploy(commissionReceiver, commissionAmountIsBasisPoints)) as YearnProxy;
+		const yearnProxy = (await YearnProxy.deploy(feeReceiver, feeAmountIsBasisPoints)) as YearnProxy;
 		return yearnProxy;
 	}
 
-	it('Updates commission percentage', async function () {
+	it('Updates fee percentage', async function () {
 		const signers = await ethers.getSigners();
 		const signer = signers[0];
 
@@ -27,7 +27,7 @@ describe('updateCommissionReceiver()', async function () {
 		const oldReceiver = (event as any).args[0];
 		const newReceiver = (event as any).args[1];
 
-		expect(oldReceiver).to.equal(commissionReceiver);
+		expect(oldReceiver).to.equal(feeReceiver);
 		expect(newReceiver).to.equal(newCommissionReceiver);
 
 		expect(receipt.status).to.be.eq(1);

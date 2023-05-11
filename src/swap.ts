@@ -24,15 +24,11 @@ async function main() {
 	const sushi = '0x6B3595068778DD592e39A122f4f5a5cF09C90fE2';
 
 	const sushiSwap = '0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F';
-	const commissionReceiver = '0xd7067e6acc2b703df74b7c83464c4dfb2ee27d43';
-	const commissionAmountIsBasisPoints = 100; // 1%
+	const feeReceiver = '0xd7067e6acc2b703df74b7c83464c4dfb2ee27d43';
+	const feeAmountIsBasisPoints = 100; // 1%
 
 	const SwapProxy = await ethers.getContractFactory('SwapProxy');
-	const swapProxy = (await SwapProxy.deploy(
-		sushiSwap,
-		commissionReceiver,
-		commissionAmountIsBasisPoints,
-	)) as SwapProxy;
+	const swapProxy = (await SwapProxy.deploy(sushiSwap, feeReceiver, feeAmountIsBasisPoints)) as SwapProxy;
 	console.log('SwapProxy deployed at', swapProxy.address);
 
 	const amountIn = BigNumber.from('10000000000000000');

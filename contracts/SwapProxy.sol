@@ -10,8 +10,8 @@ import "./libraries/SafeERC20.sol";
 contract SwapProxy is Ownable {
 	using SafeERC20 for IERC20;
 	IUniswapV2Router01 private _router;
-	address private _commissionReceiver;
-	uint256 private _commissionInBasisPoints;
+	address private _feeReceiver;
+	uint256 private _feeInBasisPoints;
 
 	event CommissionPercentageUpdated(uint256 oldCommissionInBasisPoints, uint256 newCommissionInBasisPoints);
 
@@ -22,17 +22,17 @@ contract SwapProxy is Ownable {
 		uint256 amountOut,
 		uint256 amountWithoutCommission,
 		uint256 amountOutWithoutCommission,
-		uint256 commission
+		uint256 fee
 	);
 
 	constructor(
 		address router_,
-		address commisionReceiver_,
-		uint256 commissionInBasisPoints_
+		address feeReceiver_,
+		uint256 feeInBasisPoints_
 	) {
 		_router = IUniswapV2Router01(router_);
-		_commissionReceiver = commisionReceiver_;
-		_commissionInBasisPoints = commissionInBasisPoints_;
+		_feeReceiver = feeReceiver_;
+		_feeInBasisPoints = feeInBasisPoints_;
 	}
 
 	function swapExactTokensForTokens(
@@ -119,40 +119,40 @@ contract SwapProxy is Ownable {
 		uint256 amountIn,
 		uint256 amountOut
 	) internal returns (uint256 newAmountIn, uint256 newAmountOut) {
-		uint256 commission = (amountIn * _commissionInBasisPoints) / 10000;
+		uint256 fee = (amountIn * _feeInBasisPoints) / 10000;
 
-		newAmountIn = amountIn - commission;
-		newAmountOut = (amountOut * (10000 - _commissionInBasisPoints)) / 10000;
+		newAmountIn = amountIn - fee;
+		newAmountOut = (amountOut * (10000 - _feeInBasisPoints)) / 10000;
 
 		IERC20(srcToken).safeTransferFrom(msg.sender, address(this), amountIn);
-		IERC20(srcToken).safeTransfer(_commissionReceiver, commission);
+		IERC20(srcToken).safeTransfer(_feeReceiver, fee);
 
-		emit SwapWithCommission(amountIn, amountOut, newAmountIn, newAmountOut, commission);
+		emit SwapWithCommission(amountIn, amountOut, newAmountIn, newAmountOut, fee);
 	}
 
 	function deductEthCommission(uint256 amountOut) internal returns (uint256 newAmountIn, uint256 newAmountOut) {
-		uint256 commission = (msg.value * _commissionInBasisPoints) / 10000;
+		uint256 fee = (msg.value * _feeInBasisPoints) / 10000;
 
-		newAmountIn = msg.value - commission;
-		newAmountOut = (amountOut * (10000 - _commissionInBasisPoints)) / 10000;
+		newAmountIn = msg.value - fee;
+		newAmountOut = (amountOut * (10000 - _feeInBasisPoints)) / 10000;
 
-		(bool success, ) = _commissionReceiver.call{value: commission}("");
+		(bool success, ) = _feeReceiver.call{value: fee}("");
 		require(success, "Transfer to receiver failed");
 
-		emit SwapWithCommission(msg.value, amountOut, newAmountIn, newAmountOut, commission);
+		emit SwapWithCommission(msg.value, amountOut, newAmountIn, newAmountOut, fee);
 	}
 
-	function updateCommissionPercent(uint256 commissionInBasisPoints_) external onlyOwner {
-		uint256 oldCommissionInBasisPoints = _commissionInBasisPoints;
-		_commissionInBasisPoints = commissionInBasisPoints_;
+	function updateCommissionPercent(uint256 feeInBasisPoints_) external onlyOwner {
+		uint256 oldCommissionInBasisPoints = _feeInBasisPoints;
+		_feeInBasisPoints = feeInBasisPoints_;
 
-		emit CommissionPercentageUpdated(oldCommissionInBasisPoints, _commissionInBasisPoints);
+		emit CommissionPercentageUpdated(oldCommissionInBasisPoints, _feeInBasisPoints);
 	}
 
-	function updateCommissionReceiver(address commisionReceiver_) external onlyOwner {
-		address oldCommissionReceiver = _commissionReceiver;
-		_commissionReceiver = commisionReceiver_;
+	function updateCommissionReceiver(address feeReceiver_) external onlyOwner {
+		address oldCommissionReceiver = _feeReceiver;
+		_feeReceiver = feeReceiver_;
 
-		emit CommissionReceiverUpdated(oldCommissionReceiver, _commissionReceiver);
+		emit CommissionReceiverUpdated(oldCommissionReceiver, _feeReceiver);
 	}
 }

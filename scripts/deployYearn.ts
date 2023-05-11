@@ -1,9 +1,9 @@
 import hardhat, { ethers } from 'hardhat';
 
 async function deploy() {
-	const commissionReceiver = '0x037ef1821002d716E3C612beb23DCF4Ef338A405';
-	const commissionInBasisPoints = 100;
-	const deployArgs: [string, number] = [commissionReceiver, commissionInBasisPoints];
+	const feeReceiver = '0x037ef1821002d716E3C612beb23DCF4Ef338A405';
+	const feeInBasisPoints = 100;
+	const deployArgs: [string, number] = [feeReceiver, feeInBasisPoints];
 
 	const YearnProxy = await ethers.getContractFactory('YearnProxy');
 	const yearnProxy = await YearnProxy.deploy(...deployArgs);
