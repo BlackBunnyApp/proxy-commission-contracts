@@ -43,7 +43,7 @@ describe('swapExactTokensForETH', async function () {
 			.swapExactTokensForTokens(amountIn, amountOut, path, signer.address, deadline);
 		const receipt = await tx.wait();
 
-		const event = receipt.events?.find((event) => event.event === 'SwapWithCommission');
+		const event = receipt.events?.find((event) => event.event === 'SwapWithFee');
 		// console.log(event);
 		const fee = (event as any).args[4];
 

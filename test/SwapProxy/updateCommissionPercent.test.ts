@@ -3,10 +3,10 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { SwapProxy } from '../../typechain-types';
 
-describe('updateCommissionPercentage()', async function () {
+describe('updateFeePercentage()', async function () {
 	const feeReceiver = '0xc7ae8f9Ea8bb06A04e98d43a941Dff8454e6ad36';
 	const feeAmountIsBasisPoints = 100; // 1%
-	const newCommissionAmountIsBasisPoints = 1000; // 10%
+	const newFeeAmountIsBasisPoints = 1000; // 10%
 
 	async function deploySwapProxy(): Promise<SwapProxy> {
 		const sushiSwap = '0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F';
@@ -22,15 +22,15 @@ describe('updateCommissionPercentage()', async function () {
 
 		const swapProxy = await loadFixture(deploySwapProxy);
 
-		const tx = await swapProxy.connect(signer).updateCommissionPercent(newCommissionAmountIsBasisPoints);
+		const tx = await swapProxy.connect(signer).updateFeePercent(newFeeAmountIsBasisPoints);
 		const receipt = await tx.wait();
 
-		const event = receipt.events?.find((event) => event.event === 'CommissionPercentageUpdated');
-		const oldCommission = (event as any).args[0];
-		const newCommission = (event as any).args[1];
+		const event = receipt.events?.find((event) => event.event === 'FeePercentageUpdated');
+		const oldFee = (event as any).args[0];
+		const newFee = (event as any).args[1];
 
-		expect(oldCommission).to.equal(100);
-		expect(newCommission).to.equal(1000);
+		expect(oldFee).to.equal(100);
+		expect(newFee).to.equal(1000);
 
 		expect(receipt.status).to.be.eq(1);
 	});
@@ -40,7 +40,7 @@ describe('updateCommissionPercentage()', async function () {
 
 		const swapProxy = await loadFixture(deploySwapProxy);
 
-		const tx = swapProxy.connect(signer).updateCommissionPercent(newCommissionAmountIsBasisPoints);
+		const tx = swapProxy.connect(signer).updateFeePercent(newFeeAmountIsBasisPoints);
 		expect(tx).to.be.revertedWith('Ownable: caller is not the owner');
 	});
 });

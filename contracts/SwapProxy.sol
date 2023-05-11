@@ -13,15 +13,15 @@ contract SwapProxy is Ownable {
 	address private _feeReceiver;
 	uint256 private _feeInBasisPoints;
 
-	event CommissionPercentageUpdated(uint256 oldCommissionInBasisPoints, uint256 newCommissionInBasisPoints);
+	event FeePercentageUpdated(uint256 oldFeeInBasisPoints, uint256 newFeeInBasisPoints);
 
-	event CommissionReceiverUpdated(address oldCommissionReceiver, address newCommissionReceiver);
+	event FeeReceiverUpdated(address oldFeeReceiver, address newFeeReceiver);
 
-	event SwapWithCommission(
+	event SwapWithFee(
 		uint256 amountIn,
 		uint256 amountOut,
-		uint256 amountWithoutCommission,
-		uint256 amountOutWithoutCommission,
+		uint256 amountWithoutFee,
+		uint256 amountOutWithoutFee,
 		uint256 fee
 	);
 
@@ -42,7 +42,7 @@ contract SwapProxy is Ownable {
 		address to,
 		uint256 deadline
 	) external returns (uint256[] memory amounts) {
-		(uint256 newAmountIn, uint256 newAmountOut) = deductCommission(path[0], amountIn, amountOutMin);
+		(uint256 newAmountIn, uint256 newAmountOut) = deductFee(path[0], amountIn, amountOutMin);
 
 		IERC20(path[0]).approve(address(_router), newAmountIn);
 
@@ -56,7 +56,7 @@ contract SwapProxy is Ownable {
 		address to,
 		uint256 deadline
 	) external returns (uint256[] memory amounts) {
-		(uint256 newAmountIn, uint256 newAmountOut) = deductCommission(path[0], amountInMax, amountOut);
+		(uint256 newAmountIn, uint256 newAmountOut) = deductFee(path[0], amountInMax, amountOut);
 
 		IERC20(path[0]).approve(address(_router), newAmountIn);
 
@@ -69,7 +69,7 @@ contract SwapProxy is Ownable {
 		address to,
 		uint256 deadline
 	) external payable returns (uint256[] memory amounts) {
-		(uint256 newAmountIn, uint256 newAmountOut) = deductEthCommission(amountOutMin);
+		(uint256 newAmountIn, uint256 newAmountOut) = deductEthFee(amountOutMin);
 
 		amounts = _router.swapExactETHForTokens{value: newAmountIn}(newAmountOut, path, to, deadline);
 		// amounts = _router.swapExactETHForTokens{value: msg.value}(amountOutMin, path, to, deadline);
@@ -82,7 +82,7 @@ contract SwapProxy is Ownable {
 		address to,
 		uint256 deadline
 	) external returns (uint256[] memory amounts) {
-		(uint256 newAmountIn, uint256 newAmountOut) = deductCommission(path[0], amountInMax, amountOut);
+		(uint256 newAmountIn, uint256 newAmountOut) = deductFee(path[0], amountInMax, amountOut);
 
 		IERC20(path[0]).approve(address(_router), newAmountIn);
 
@@ -96,7 +96,7 @@ contract SwapProxy is Ownable {
 		address to,
 		uint256 deadline
 	) external returns (uint256[] memory amounts) {
-		(uint256 newAmountIn, uint256 newAmountOut) = deductCommission(path[0], amountIn, amountOutMin);
+		(uint256 newAmountIn, uint256 newAmountOut) = deductFee(path[0], amountIn, amountOutMin);
 
 		IERC20(path[0]).approve(address(_router), newAmountIn);
 
@@ -109,12 +109,12 @@ contract SwapProxy is Ownable {
 		address to,
 		uint256 deadline
 	) external payable returns (uint256[] memory amounts) {
-		(uint256 newAmountIn, uint256 newAmountOut) = deductEthCommission(amountOut);
+		(uint256 newAmountIn, uint256 newAmountOut) = deductEthFee(amountOut);
 
 		amounts = _router.swapETHForExactTokens{value: newAmountIn}(newAmountOut, path, to, deadline);
 	}
 
-	function deductCommission(
+	function deductFee(
 		address srcToken,
 		uint256 amountIn,
 		uint256 amountOut
@@ -127,10 +127,10 @@ contract SwapProxy is Ownable {
 		IERC20(srcToken).safeTransferFrom(msg.sender, address(this), amountIn);
 		IERC20(srcToken).safeTransfer(_feeReceiver, fee);
 
-		emit SwapWithCommission(amountIn, amountOut, newAmountIn, newAmountOut, fee);
+		emit SwapWithFee(amountIn, amountOut, newAmountIn, newAmountOut, fee);
 	}
 
-	function deductEthCommission(uint256 amountOut) internal returns (uint256 newAmountIn, uint256 newAmountOut) {
+	function deductEthFee(uint256 amountOut) internal returns (uint256 newAmountIn, uint256 newAmountOut) {
 		uint256 fee = (msg.value * _feeInBasisPoints) / 10000;
 
 		newAmountIn = msg.value - fee;
@@ -139,20 +139,20 @@ contract SwapProxy is Ownable {
 		(bool success, ) = _feeReceiver.call{value: fee}("");
 		require(success, "Transfer to receiver failed");
 
-		emit SwapWithCommission(msg.value, amountOut, newAmountIn, newAmountOut, fee);
+		emit SwapWithFee(msg.value, amountOut, newAmountIn, newAmountOut, fee);
 	}
 
-	function updateCommissionPercent(uint256 feeInBasisPoints_) external onlyOwner {
-		uint256 oldCommissionInBasisPoints = _feeInBasisPoints;
+	function updateFeePercent(uint256 feeInBasisPoints_) external onlyOwner {
+		uint256 oldFeeInBasisPoints = _feeInBasisPoints;
 		_feeInBasisPoints = feeInBasisPoints_;
 
-		emit CommissionPercentageUpdated(oldCommissionInBasisPoints, _feeInBasisPoints);
+		emit FeePercentageUpdated(oldFeeInBasisPoints, _feeInBasisPoints);
 	}
 
-	function updateCommissionReceiver(address feeReceiver_) external onlyOwner {
-		address oldCommissionReceiver = _feeReceiver;
+	function updateFeeReceiver(address feeReceiver_) external onlyOwner {
+		address oldFeeReceiver = _feeReceiver;
 		_feeReceiver = feeReceiver_;
 
-		emit CommissionReceiverUpdated(oldCommissionReceiver, _feeReceiver);
+		emit FeeReceiverUpdated(oldFeeReceiver, _feeReceiver);
 	}
 }

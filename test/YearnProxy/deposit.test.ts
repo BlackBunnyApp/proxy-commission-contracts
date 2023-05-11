@@ -37,7 +37,7 @@ describe('deposit', async function () {
 		const receipt = await tx.wait();
 		console.log(receipt);
 
-		const event = receipt.events?.find((event) => event.event === 'DepositWithCommission');
+		const event = receipt.events?.find((event) => event.event === 'DepositWithFee');
 		// console.log(event);
 		const fee = (event as any).args[2];
 

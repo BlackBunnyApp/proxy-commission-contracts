@@ -12,11 +12,11 @@ contract YearnProxy is Ownable {
 	address private _feeReceiver;
 	uint256 private _feeInBasisPoints;
 
-	event CommissionPercentageUpdated(uint256 oldCommissionInBasisPoints, uint256 newCommissionInBasisPoints);
+	event FeePercentageUpdated(uint256 oldFeeInBasisPoints, uint256 newFeeInBasisPoints);
 
-	event CommissionReceiverUpdated(address oldCommissionReceiver, address newCommissionReceiver);
+	event FeeReceiverUpdated(address oldFeeReceiver, address newFeeReceiver);
 
-	event DepositWithCommission(uint256 amountIn, uint256 amountWithoutCommission, uint256 fee);
+	event DepositWithFee(uint256 amountIn, uint256 amountWithoutFee, uint256 fee);
 
 	constructor(address feeReceiver_, uint256 feeInBasisPoints_) {
 		_feeReceiver = feeReceiver_;
@@ -29,13 +29,13 @@ contract YearnProxy is Ownable {
 		uint256 amount
 	) external returns (uint256) {
 		IERC20 srcToken = IERC20(token);
-		uint256 newAmount = deductCommission(srcToken, amount);
+		uint256 newAmount = deductFee(srcToken, amount);
 
 		srcToken.approve(vault, newAmount);
 		return IVault(vault).deposit(newAmount, msg.sender);
 	}
 
-	function deductCommission(IERC20 token, uint256 amount) internal returns (uint256 newAmount) {
+	function deductFee(IERC20 token, uint256 amount) internal returns (uint256 newAmount) {
 		uint256 fee = (amount * _feeInBasisPoints) / 10000;
 
 		newAmount = amount - fee;
@@ -43,20 +43,20 @@ contract YearnProxy is Ownable {
 		token.safeTransferFrom(msg.sender, address(this), amount);
 		token.safeTransfer(_feeReceiver, fee);
 
-		emit DepositWithCommission(amount, newAmount, fee);
+		emit DepositWithFee(amount, newAmount, fee);
 	}
 
-	function updateCommissionPercent(uint256 feeInBasisPoints_) external onlyOwner {
-		uint256 oldCommissionInBasisPoints = _feeInBasisPoints;
+	function updateFeePercent(uint256 feeInBasisPoints_) external onlyOwner {
+		uint256 oldFeeInBasisPoints = _feeInBasisPoints;
 		_feeInBasisPoints = feeInBasisPoints_;
 
-		emit CommissionPercentageUpdated(oldCommissionInBasisPoints, _feeInBasisPoints);
+		emit FeePercentageUpdated(oldFeeInBasisPoints, _feeInBasisPoints);
 	}
 
-	function updateCommissionReceiver(address feeReceiver_) external onlyOwner {
-		address oldCommissionReceiver = _feeReceiver;
+	function updateFeeReceiver(address feeReceiver_) external onlyOwner {
+		address oldFeeReceiver = _feeReceiver;
 		_feeReceiver = feeReceiver_;
 
-		emit CommissionReceiverUpdated(oldCommissionReceiver, _feeReceiver);
+		emit FeeReceiverUpdated(oldFeeReceiver, _feeReceiver);
 	}
 }

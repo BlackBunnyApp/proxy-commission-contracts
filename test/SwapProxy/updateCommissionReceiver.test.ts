@@ -3,9 +3,9 @@ import { expect } from 'chai';
 import { ethers } from 'hardhat';
 import { SwapProxy } from '../../typechain-types';
 
-describe('updateCommissionReceiver()', async function () {
+describe('updateFeeReceiver()', async function () {
 	const feeReceiver = '0xc7ae8f9Ea8bb06A04e98d43a941Dff8454e6ad36';
-	const newCommissionReceiver = '0x2A40019ABd4A61d71aBB73968BaB068ab389a636';
+	const newFeeReceiver = '0x2A40019ABd4A61d71aBB73968BaB068ab389a636';
 	const feeAmountIsBasisPoints = 100; // 1%
 
 	async function deploySwapProxy(): Promise<SwapProxy> {
@@ -22,15 +22,15 @@ describe('updateCommissionReceiver()', async function () {
 
 		const swapProxy = await loadFixture(deploySwapProxy);
 
-		const tx = await swapProxy.connect(signer).updateCommissionReceiver(newCommissionReceiver);
+		const tx = await swapProxy.connect(signer).updateFeeReceiver(newFeeReceiver);
 		const receipt = await tx.wait();
 
-		const event = receipt.events?.find((event) => event.event === 'CommissionReceiverUpdated');
+		const event = receipt.events?.find((event) => event.event === 'FeeReceiverUpdated');
 		const oldReceiver = (event as any).args[0];
 		const newReceiver = (event as any).args[1];
 
 		expect(oldReceiver).to.equal(feeReceiver);
-		expect(newReceiver).to.equal(newCommissionReceiver);
+		expect(newReceiver).to.equal(newFeeReceiver);
 
 		expect(receipt.status).to.be.eq(1);
 	});
@@ -40,7 +40,7 @@ describe('updateCommissionReceiver()', async function () {
 
 		const swapProxy = await loadFixture(deploySwapProxy);
 
-		const tx = swapProxy.connect(signer).updateCommissionReceiver(newCommissionReceiver);
+		const tx = swapProxy.connect(signer).updateFeeReceiver(newFeeReceiver);
 		expect(tx).to.be.revertedWith('Ownable: caller is not the owner');
 	});
 });
