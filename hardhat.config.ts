@@ -37,6 +37,10 @@ const config: HardhatUserConfig = {
 	etherscan,
 	gasReporter: {
 		enabled: true,
+		// enabled: process.env.REPORT_GAS ? true : false,
+		currency: 'USD',
+		gasPrice: 70,
+		coinmarketcap: 'af8ddfb6-5886-41fe-80b5-19259a3a03be',
 	},
 	typechain: {
 		target: 'ethers-v5',
