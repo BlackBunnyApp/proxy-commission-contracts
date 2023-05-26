@@ -10,7 +10,6 @@ import dotenv from 'dotenv';
 import { HardhatUserConfig } from 'hardhat/config';
 import networks from './hardhat.networks';
 import etherscan from './hardhat.etherscan';
-import 'hardhat-tracer';
 
 dotenv.config();
 
@@ -26,12 +25,15 @@ const config: HardhatUserConfig = {
 		},
 		compilers: [
 			{
-				version: '0.8.15',
+				version: '0.8.17',
 			},
 			{
 				version: '0.6.12',
 			},
 		],
+	},
+	tracer: {
+		tasks: ['run'],
 	},
 	networks,
 	etherscan,
@@ -39,7 +41,7 @@ const config: HardhatUserConfig = {
 		enabled: true,
 		// enabled: process.env.REPORT_GAS ? true : false,
 		currency: 'USD',
-		gasPrice: 70,
+		gasPrice: 40,
 		coinmarketcap: 'af8ddfb6-5886-41fe-80b5-19259a3a03be',
 	},
 	typechain: {

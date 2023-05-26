@@ -1,21 +1,21 @@
 {
-  "compilerOptions": {
-    "target": "es2020",
-    "module": "commonjs",
-    "esModuleInterop": true,
-    "outDir": "dist/src",
-    "sourceMap": true,
-    "declaration": true,
-    "moduleResolution": "node",
-    "experimentalDecorators": true,
-    "allowSyntheticDefaultImports": true,
-    "importHelpers": true,
-    "noFallthroughCasesInSwitch": true,
-    "noImplicitReturns": true,
-    "noUnusedParameters": true,
-    "resolveJsonModule": true,
-    "strictNullChecks": true,
-    "typeRoots": ["node_modules/@types"],
-    "lib": ["es2020", "dom", "esnext"]
-  }
+	"compilerOptions": {
+		"target": "es2018",
+		"module": "commonjs",
+		"strict": true,
+		"esModuleInterop": true,
+		"outDir": "dist",
+		"declaration": true,
+		"resolveJsonModule": true
+	},
+	"include": [
+		"./scripts",
+		"./test",
+		"./typechain",
+		"./utils",
+		"./deploy",
+		"./constants",
+		"./tasks"
+	],
+	"files": ["./hardhat.config.ts"]
 }

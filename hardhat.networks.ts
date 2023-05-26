@@ -53,18 +53,21 @@ const networks: NetworksUserConfig = {
 	// Ethereum
 	hardhat: {
 		chainId: 1,
-		// forking: {
-		// 	url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
-		// 	// url: `https://1rpc.io/glmr`,
-		// 	// url: 'https://eth-rinkeby.alchemyapi.io/v2/y4o-h3QndsszyN2IqjF8myShdXud6RRc',
-		// 	// url: 'https://polygon-mumbai.g.alchemy.com/v2/xuvttDBAAQvHjBMWurgJzXCKjsWyp8x_',
-		// },
+		forking: {
+			url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
+			// 	// url: `https://1rpc.io/glmr`,
+			// 	// url: 'https://eth-rinkeby.alchemyapi.io/v2/y4o-h3QndsszyN2IqjF8myShdXud6RRc',
+			// 	// url: 'https://polygon-mumbai.g.alchemy.com/v2/xuvttDBAAQvHjBMWurgJzXCKjsWyp8x_',
+		},
 	},
 	arbitrumOne: {
 		url: 'https://arb1.arbitrum.io/rpc',
 		accounts: getDeploymentAccount(),
 	},
-	mainnet: createEthereumNetworkConfig('mainnet'),
+	mainnet: {
+		url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
+		accounts: [process.env.PRIVATE_KEY as string],
+	},
 	goerli: createEthereumNetworkConfig('goerli'),
 	sepolia: createEthereumNetworkConfig('sepolia'),
 

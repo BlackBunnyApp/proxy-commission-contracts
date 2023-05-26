@@ -1,12 +1,18 @@
 import hardhat, { ethers } from 'hardhat';
+// eslint-disable-next-line camelcase
+import { YearnProxy__factory } from '../typechain-types';
+import { log } from 'console';
 
 async function deploy() {
-	const feeReceiver = '0x037ef1821002d716E3C612beb23DCF4Ef338A405';
-	const feeInBasisPoints = 100;
+	// production build
+	const feeReceiver = '0xd9FaE4121A72008ded7C42816982d6ABD44F0421'; // Gnosis from owner
+	const feeInBasisPoints = 50;
 	const deployArgs: [string, number] = [feeReceiver, feeInBasisPoints];
 
-	const YearnProxy = await ethers.getContractFactory('YearnProxy');
+	// eslint-disable-next-line camelcase
+	const YearnProxy = (await ethers.getContractFactory('YearnProxy')) as YearnProxy__factory;
 	const yearnProxy = await YearnProxy.deploy(...deployArgs);
+	// const yearnProxy = { address: '0x3797669a4616cdABd9F807a4E637DdB538C98345' };
 	await yearnProxy.deployed();
 	console.log(yearnProxy.address);
 
