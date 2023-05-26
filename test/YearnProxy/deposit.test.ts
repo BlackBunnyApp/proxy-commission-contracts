@@ -22,7 +22,7 @@ describe('deposit', async function () {
 	}
 
 	it('Deposit happens and fee taken', async function () {
-		const Dai = await ethers.getContractFactory('ERC20');
+		const Dai = await ethers.getContractFactory('@openzeppelin/contracts/token/ERC20/ERC20.sol:ERC20');
 		const daiContract = Dai.attach(dai) as ERC20;
 		const signer = await getSignerFromEnvPrivate();
 
@@ -33,7 +33,7 @@ describe('deposit', async function () {
 
 		// console.log('Allowance', formatEther(await daiContract.allowance(signer.address, swapProxy.address)));
 
-		const tx = await yearnProxy.connect(signer).deposit(daiVault, dai, amountIn);
+		const tx = await yearnProxy.connect(signer).deposit(daiVault, amountIn);
 		const receipt = await tx.wait();
 		console.log(receipt);
 
