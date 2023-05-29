@@ -32,9 +32,30 @@ const config: HardhatUserConfig = {
 			},
 		],
 	},
-	tracer: {
-		tasks: ['run'],
-	},
+	// tracer: {
+	// 	// tasks: ['run'],
+	// 	stateOverrides: {
+	// 		'0x3B27F92C0e212C671EA351827EDF93DB27cc0c65': {
+	// 			storage: {
+	// 				'1': '0xEf1c6E67703c7BD7107eed8303Fbe6EC2554BF6B',
+	// 				'2': '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+	// 				'3': '0x037ef1821002d716E3C612beb23DCF4Ef338A405',
+	// 				'4': '100',
+	// 			},
+	// 			bytecode: 'SwapProxy',
+	// 		},
+	// 		'0x235E066372bBC1c2129BDce6A3Be72321b97A756': {
+	// 			storage: {
+	// 				'1': '0x037ef1821002d716E3C612beb23DCF4Ef338A405',
+	// 				'2': '100',
+	// 			},
+	// 			bytecode: 'YearnProxy',
+	// 		},
+	// 	},
+	// 	// nameTags: {
+	// 	// 	'0xEf1c6E67703c7BD7107eed8303Fbe6EC2554BF6B': 'UniversalRouter',
+	// 	// },
+	// },
 	networks,
 	etherscan,
 	gasReporter: {

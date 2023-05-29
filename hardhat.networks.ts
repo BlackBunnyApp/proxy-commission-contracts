@@ -22,7 +22,9 @@ function isForkingLocal(isForking: boolean): HardhatNetworkUserConfig {
 
 	return {
 		forking: {
-			url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
+			// url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
+			url: `https://polygon-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY_POLYGON}`,
+
 			// url: `https://1rpc.io/glmr`,
 			// url: 'https://eth-rinkeby.alchemyapi.io/v2/y4o-h3QndsszyN2IqjF8myShdXud6RRc',
 			// url: 'https://polygon-mumbai.g.alchemy.com/v2/xuvttDBAAQvHjBMWurgJzXCKjsWyp8x_',
@@ -83,7 +85,7 @@ const networks: NetworksUserConfig = {
 
 	// Polygon
 	polygon: {
-		url: '',
+		url: `https://polygon-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY_POLYGON}`,
 		accounts: getDeploymentAccount(),
 	},
 	mumbai: {
