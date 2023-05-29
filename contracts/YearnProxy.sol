@@ -28,7 +28,7 @@ contract YearnProxy is Ownable {
 		IERC20 srcToken = IERC20(token);
 		uint256 newAmount = deductFee(srcToken, amount);
 
-		srcToken.approve(vault, newAmount);
+		srcToken.safeIncreaseAllowance(vault, newAmount);
 
 		shares = IVault(vault).deposit(newAmount, msg.sender);
 	}
