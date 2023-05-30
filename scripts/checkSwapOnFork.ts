@@ -1,21 +1,13 @@
-import hardhat, { ethers } from 'hardhat';
+import { ethers } from 'hardhat';
 // eslint-disable-next-line camelcase
-import { IUniversalRouter, SwapProxy__factory } from '../typechain-types';
+import { IQuoter, IQuoterV2, ISwapRouter } from '../typechain-types';
 import { log } from 'console';
+import { abi } from './../node_modules/@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json';
+import { getPoolImmutables, getPoolState } from '../utils/helpers';
+import { parseUnits } from 'ethers/lib/utils';
+import { BigNumber } from 'ethers';
 
-async function deploy() {
-	// hardhat.tracer.enabled = true;
-	const swapEthToUSDT = {
-		commands: '0x0b00',
-		value: '5000000000000000',
-		inputs: [
-			'0x00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000011c37937e08000',
-			// eslint-disable-next-line max-len
-			'0x00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000011c37937e0800000000000000000000000000000000000000000000000000000000000008c72f600000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002bc02aaa39b223fe8d0a0e5c4f27ead9083c756cc20001f4dac17f958d2ee523a2206206994597c13d831ec7000000000000000000000000000000000000000000',
-		],
-		deadline: Math.floor(new Date().getTime() / 1000),
-	};
-
+async function executeSwap() {
 	const feeReceiver = '0x037ef1821002d716E3C612beb23DCF4Ef338A405';
 	const feeInBasisPoints = 100;
 	const universalRouter = '0xEf1c6E67703c7BD7107eed8303Fbe6EC2554BF6B';
@@ -23,19 +15,65 @@ async function deploy() {
 	const deployArgs: [string, string, string, number] = [universalRouter, weth, feeReceiver, feeInBasisPoints];
 
 	// eslint-disable-next-line camelcase
-	const SwapProxy = (await ethers.getContractFactory('SwapProxy')) as SwapProxy__factory;
-	const swapProxy = await SwapProxy.deploy(...deployArgs);
-	await swapProxy.deployed();
+	// const SwapProxy = (await ethers.getContractFactory('SwapProxy')) as SwapProxy__factory;
+	// const swapProxy = await SwapProxy.deploy(...deployArgs);
+	// await swapProxy.deployed();
 
-	log(swapProxy.address);
+	// log('SwapProxy', swapProxy.address);
 
-	const router = (await ethers.getContractAt('IUniversalRouter', universalRouter)) as IUniversalRouter;
+	const router = (await ethers.getContractAt('ISwapRouter', universalRouter)) as ISwapRouter;
 
-	log(router.address);
+	log('SwapRouter', router.address);
+
+	const poolAddress = '0x4e68Ccd3E89f51C3074ca5072bbAC773960dFa36';
+	const pool = new ethers.Contract(poolAddress, abi, ethers.provider);
+
+	const quoterAddress = '0x61fFE014bA17989E743c5F6cB21bF9697530B21e';
+	const quoter = (await ethers.getContractAt('IQuoterV2', quoterAddress)) as IQuoterV2;
+
+	const { token0, token1, fee } = await getPoolImmutables(pool);
+
+	const { sqrtPriceX96 } = await getPoolState(pool);
+	console.log('sqrtPriceX96', sqrtPriceX96.toString());
+
+	const decimals0 = 18;
+	const amountIn = parseUnits('0.005', decimals0);
+
+	// const decimals1 = 6;
+	const quoteParams: IQuoterV2.QuoteExactInputSingleParamsStruct = {
+		tokenIn: token0,
+		tokenOut: token1,
+		fee,
+		amountIn,
+		sqrtPriceLimitX96: BigNumber.from(0),
+	};
+
+	console.log('Quote params', quoteParams);
+
+	const quoteResult = await quoter.callStatic.quoteExactInputSingle(quoteParams);
+	console.log('QuoteResult', quoteResult);
+
+	const signers = await ethers.getSigners();
+	const deadline = Math.floor(new Date().getTime() / 1000) + 60 * 10;
+
+	const params: ISwapRouter.ExactInputSingleParamsStruct = {
+		tokenIn: token0,
+		tokenOut: token1,
+		fee,
+		recipient: signers[0].address,
+		amountIn,
+		amountOutMinimum: quoteResult.amountOut,
+		deadline,
+		sqrtPriceLimitX96: sqrtPriceX96,
+	};
+
+	console.log(params);
+
+	const tx = await router.exactInputSingle(params);
+
+	// console.log(tx);
 
 	// const address = '0x3797669a4616cdABd9F807a4E637DdB538C98345';
-
-	const tx = await router.execute(swapEthToUSDT.commands, swapEthToUSDT.inputs, swapEthToUSDT.deadline);
 
 	// const tx = await router.execute(
 	// 	weth,
@@ -46,7 +84,7 @@ async function deploy() {
 	// );
 }
 
-deploy()
+executeSwap()
 	.then(() => process.exit(0))
 	.catch((error) => {
 		console.log(error);
