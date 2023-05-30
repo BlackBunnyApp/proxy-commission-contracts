@@ -9,7 +9,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@uniswap/universal-router/contracts/interfaces/IUniversalRouter.sol";
 import "./libraries/SafeERC20.sol";
 
-contract SwapProxyWithExecute is Ownable {
+contract SwapProxyDeprecated is Ownable {
 	IUniversalRouter public router;
 	address public WETH;
 
@@ -22,13 +22,13 @@ contract SwapProxyWithExecute is Ownable {
 
 	event FeeReceiverUpdated(address oldFeeReceiver, address newFeeReceiver);
 
-	// event SwapWithFee(
-	// 	uint256 amountIn,
-	// 	uint256 amountOut,
-	// 	uint256 amountWithoutFee,
-	// 	uint256 amountOutWithoutFee,
-	// 	uint256 fee
-	// );
+	event SwapWithFee(
+		uint256 amountIn,
+		uint256 amountOut,
+		uint256 amountWithoutFee,
+		uint256 amountOutWithoutFee,
+		uint256 fee
+	);
 
 	constructor(
 		address router_,
@@ -43,46 +43,55 @@ contract SwapProxyWithExecute is Ownable {
 		_feeInBasisPoints = feeInBasisPoints_;
 	}
 
-	function executePlain(
-		address inputToken,
-		uint256 amount,
-		bytes calldata commands,
-		bytes[] memory inputs,
-		uint256 deadline
-	) public payable {
-		if (inputToken == WETH) {
-			// uint256 fee = deductEthFeeOptimized();
-			router.execute{value: msg.value}(commands, inputs, deadline);
-		} else {
-			IERC20 token = IERC20(inputToken);
+	function deductFee(
+		address srcToken,
+		uint256 amountIn,
+		uint256 amountOut
+	) internal returns (uint256 newAmountIn, uint256 newAmountOut) {
+		uint256 fee = (amountIn * _feeInBasisPoints) / 10000;
 
-			token.safeTransferFrom(msg.sender, address(this), amount);
-			token.safeIncreaseAllowance(address(router), amount);
+		newAmountIn = amountIn - fee;
+		newAmountOut = (amountOut * (10000 - _feeInBasisPoints)) / 10000;
 
-			router.execute(commands, inputs, deadline);
-		}
+		IERC20(srcToken).safeTransferFrom(msg.sender, address(this), amountIn);
+		IERC20(srcToken).safeTransfer(_feeReceiver, fee);
+
+		emit SwapWithFee(amountIn, amountOut, newAmountIn, newAmountOut, fee);
 	}
 
-	/// @notice Executes swap on Uniswap UniversalRouter
-	/// @dev swap params must already changed to be without fee amount
-	/// @dev optimized version with off-chain calculation
-	function execute(
-		address inputToken,
-		uint256 amount,
-		bytes calldata commands,
-		bytes[] memory inputs,
-		uint256 deadline
-	) public payable {
-		if (inputToken == WETH) {
-			uint256 fee = deductEthFeeOptimized();
-			router.execute{value: msg.value - fee}(commands, inputs, deadline);
-		} else {
-			deductFeeOptimized(inputToken, amount);
-			router.execute(commands, inputs, deadline);
-		}
+	function deductEthFee(uint256 amountOut) internal returns (uint256 newAmountIn, uint256 newAmountOut) {
+		uint256 fee = (msg.value * _feeInBasisPoints) / 10000;
+
+		newAmountIn = msg.value - fee;
+		newAmountOut = (amountOut * (10000 - _feeInBasisPoints)) / 10000;
+
+		(bool success, ) = _feeReceiver.call{value: fee}("");
+		require(success, "Transfer to receiver failed");
+
+		emit SwapWithFee(msg.value, amountOut, newAmountIn, newAmountOut, fee);
 	}
 
-	// Complex logic with high call cost
+	function updateFeePercent(uint256 feeInBasisPoints_) external onlyOwner {
+		uint256 oldFeeInBasisPoints = _feeInBasisPoints;
+		_feeInBasisPoints = feeInBasisPoints_;
+
+		emit FeePercentageUpdated(oldFeeInBasisPoints, _feeInBasisPoints);
+	}
+
+	function updateFeeReceiver(address feeReceiver_) external onlyOwner {
+		address oldFeeReceiver = _feeReceiver;
+		_feeReceiver = feeReceiver_;
+
+		emit FeeReceiverUpdated(oldFeeReceiver, _feeReceiver);
+	}
+
+	/// @dev Needed to call by this._bytesToAddress()
+	/// @dev otherwise toAddress  can't take bytes memory
+	function getFirstTokenFromPath(bytes calldata path) public pure returns (address) {
+		return BytesLib.toAddress(path);
+	}
+
+	// Complex logic with high call cost on execute()
 	// function execute1(
 	// 	bytes calldata commands,
 	// 	bytes[] memory inputs,
@@ -169,39 +178,9 @@ contract SwapProxyWithExecute is Ownable {
 	// 	emit SwapWithFee(msg.value, amountOut, newAmountIn, newAmountOut, fee);
 	// }
 
-	function deductFeeOptimized(address srcToken, uint256 amount) internal {
-		uint256 fee = (amount * _feeInBasisPoints) / 10000;
-		IERC20 token = IERC20(srcToken);
-
-		token.safeTransferFrom(msg.sender, address(this), amount);
-		token.safeTransfer(_feeReceiver, fee);
-		token.safeIncreaseAllowance(address(router), amount - fee);
-	}
-
-	function deductEthFeeOptimized() internal returns (uint256 fee) {
-		fee = (msg.value * _feeInBasisPoints) / 10000;
-
-		(bool success, ) = _feeReceiver.call{value: fee}("");
-		require(success, "Transfer to receiver failed");
-	}
-
-	function updateFeePercent(uint256 feeInBasisPoints_) external onlyOwner {
-		uint256 oldFeeInBasisPoints = _feeInBasisPoints;
-		_feeInBasisPoints = feeInBasisPoints_;
-
-		emit FeePercentageUpdated(oldFeeInBasisPoints, _feeInBasisPoints);
-	}
-
-	function updateFeeReceiver(address feeReceiver_) external onlyOwner {
-		address oldFeeReceiver = _feeReceiver;
-		_feeReceiver = feeReceiver_;
-
-		emit FeeReceiverUpdated(oldFeeReceiver, _feeReceiver);
-	}
-
 	/// @dev Needed to call by this._bytesToAddress()
 	/// @dev otherwise toAddress  can't take bytes memory
-	function getFirstTokenFromPath(bytes calldata path) public pure returns (address) {
-		return BytesLib.toAddress(path);
-	}
+	// function getFirstTokenFromPath(bytes calldata path) public pure returns (address) {
+	// 	return BytesLib.toAddress(path);
+	// }
 }
